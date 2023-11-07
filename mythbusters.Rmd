@@ -1,0 +1,156 @@
+---
+title: "Assignment 6: Who busts the Mythbusters?"
+author: "Linh Bui""
+date: "`r Sys.Date()`"
+documentclass: article
+geometry: margin=1in
+fontsize: 11pt
+output:
+  pdf_document:
+    toc: false
+    df_print: kable
+    fig_caption: false
+    number_sections: false
+    dev: pdf
+    highlight: tango
+  html_document:
+    theme: default
+    self_contained: true
+    toc: false
+    df_print: kable
+    fig_caption: false
+    number_sections: false
+    smart: true
+    dev: svg
+---
+
+```{r setup, include = FALSE}
+# DO NOT ALTER THIS CHUNK
+knitr::opts_chunk$set(
+  echo = TRUE,
+  eval = TRUE,
+  fig.width = 5,
+  fig.asp = 0.618,
+  out.width = "70%",
+  dpi = 120,
+  fig.align = "center",
+  cache = FALSE
+)
+# Load required packages
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(infer))
+set.seed(42)
+# Load dataset
+experimental_data <- read_csv("yawn.csv")
+```
+
+## Exercise 1
+
+* The 'group' variable is the explanatory variable and the 'yawn' is the response variable. The 'yes' value in the response variable should be classified as a success. 
+
+## Exercise 2
+
+iv. The average difference in fraction_yawned between the treatment and control groups
+
+## Exercise 3
+
+```r
+specify(yawn ~ group, success = "yes")
+```
+
+## Exercise 4
+
+```r
+hypothesize(null = "independence")
+```
+
+## Exercise 5
+
+```r
+generate(reps = 10000,  type = "permute")
+```
+
+## Exercise 6
+
+```r
+calculate(stat = "diff in props",  order = c("Treatment", "Control"))
+```
+
+## Exercise 7
+
+```{r}
+yawn_null <- experimental_data %>%
+  specify(yawn ~ group, success = "yes") %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 10000,  type = "permute") %>%
+  calculate(stat = "diff in props",  order = c("Treatment", "Control"))
+```
+
+
+## Exercise 8
+
+i. 
+
+```{r}
+yawn_null %>%
+  ggplot() +
+  geom_histogram(aes(stat), bins = 11)
+```
+
+ii. 
+
+```{r}
+yawn_null %>%
+  ggplot() +
+  geom_density(mapping = aes(stat))
+```
+
+iii.
+
+```{r}
+yawn_null %>%
+  ggplot() +
+  geom_density(mapping = aes(stat), adjust = 5)
+```
+
+iv. Each distribution is centered on value 0. This is not what I expected since with a 4% increase in yawns between the control and treatment groups, I thought that it is probably that yawning is contagious. However, the graph has the mode at 0 implying that there is a high chance that there is no relationship between two variables in the experiment, and that the result gained from the experiment is based more on random chance. 
+
+## Exercise 9
+
+```{r}
+ggplot(data = yawn_null) +
+  geom_histogram(mapping = aes(stat), bins = 11) +
+  geom_density(mapping = aes(stat))
+```
+
+* It seems like when overlaying these 2 geoms, the density is covered by the histogram and the result shown is almost exactly the same as the history geom that we did in Exercise 8i. This is because the vertical axis scale for the histogram and density plots do not match. While the bar heights in the histogram count the number of data points that fall within a given range of values, the density curve's height is a fraction. 
+
+## Exercise 10
+
+```{r}
+ggplot(data = yawn_null) +
+  geom_histogram(mapping = aes(stat, y = ..density..), bins = 11) +
+  geom_density(mapping = aes(stat))
+```
+
+
+## Exercise 11
+
+```{r}
+yawn_obs_stat <- experimental_data %>%
+  specify(yawn ~ group, success = "yes") %>%
+  calculate(stat = "diff in props",  order = c("Treatment", "Control"))
+```
+
+```{r}
+yawn_null %>%
+  get_p_value(obs_stat = yawn_obs_stat, direction = "right")
+```
+
+```{r}
+yawn_null %>%
+  visualize() +
+  shade_p_value(obs_stat = yawn_obs_stat, direction = "right")
+```
+
+* Since the p-value = 0.5169 is higher than $\alpha = 0.05$, it is likely to observe the data even if the null hypothesis were true, and hence we do not have sufficient evidence to reject the null hypothesis. 
